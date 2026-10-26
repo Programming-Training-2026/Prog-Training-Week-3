@@ -1,5 +1,9 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.PositionDutyCycle;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.controller.PIDController;
@@ -18,50 +22,74 @@ public class ExtensionSubsystem extends SubsystemBase{
     private final Debouncer stallDebouncer = new Debouncer(0.25, DebounceType.kRising); 
     
     private final PIDController pidController = new PIDController(0, 0, 0); 
-    private double kp = 0.03; 
 
+    private final PositionVoltage positionOutput = new PositionVoltage(0); 
+
+    private final MotionMagicVoltage mmPositionOutput = new MotionMagicVoltage(0); 
+
+    
+    private double kp = 0.03; 
     public ExtensionSubsystem() {
         extensionMotor = new TalonFX(20); 
         extensionMotor.setPosition(0); 
 
-        pidController.setP(kp); 
+        pidController.setTolerance(1); 
 
         SmartDashboard.putNumber("Extension kP", kp); 
+
+        configureMotor();
     }
 
+    public void configureMotor() {
+        TalonFXConfiguration config = new TalonFXConfiguration(); 
+        config.Slot0.kS = 0.1; 
+        config.Slot0.kV = 0.12; 
+        config.Slot0.kA = 0.001; 
+        config.Slot0.kG = 0; 
+        
+        config.Slot0.kP = 0.05; 
+        
+        config.MotionMagic.MotionMagicCruiseVelocity = 9; 
+        config.MotionMagic.MotionMagicAcceleration = 9; 
+        config.MotionMagic.MotionMagicJerk = 0; 
+
+        extensionMotor.getConfigurator().apply(config); 
+    }
+ 
+
     public Command extend() {
-        return run(
-            () -> {
-                double outputVoltage = pidController.calculate(getPosition(), EXTENDED_POSITION); 
-                extensionMotor.setVoltage(outputVoltage); 
-            }
-        ).until(
-            () -> checkEnd(true)
-        ).finallyDo(
-            () -> extensionMotor.stopMotor()
-        ); 
+        return runOnce(() -> {
+            extensionMotor.setControl(
+                mmPositionOutput.withPosition(EXTENDED_POSITION).withSlot(0)
+            );
+        })
+        .until(() -> extensionMotor.getMotionMagicAtTarget().getValue()) // Returns true when done
+        .finallyDo((interrupted) -> {
+            // Do NOT call stopMotor() if you want the PID to keep holding the position
+            // Especially important for stuff like elevators
+        }); 
     }
 
     public Command retract() {
-        return run(
-            () -> {
-                double outputVoltage = pidController.calculate(getPosition(), RETRACTED_POSITION); 
-                extensionMotor.setVoltage(outputVoltage); 
-            }
-        ).until(
-            () -> checkEnd(false)
-        ).finallyDo(
-            () -> extensionMotor.stopMotor()
-        ); 
+        return runOnce(() -> {
+            extensionMotor.setControl(
+                mmPositionOutput.withPosition(RETRACTED_POSITION).withSlot(0)
+            );
+        })
+        .until(() -> extensionMotor.getMotionMagicAtTarget().getValue()) // Returns true when done
+        .finallyDo((interrupted) -> {
+            // Do NOT call stopMotor() if you want the PID to keep holding the position
+            // Especially important for stuff like elevators
+        }); 
     }
 
     public boolean checkEnd(boolean isExtending) {
-        boolean isAtTarget; 
-        if (isExtending) {
-            isAtTarget = Math.abs(getPosition() - EXTENDED_POSITION) <= 1; 
-        } else {
-            isAtTarget = getPosition() <= 1; 
-        }
+        boolean isAtTarget = pidController.atSetpoint(); 
+        // if (isExtending) {
+        //     isAtTarget = Math.abs(getPosition() - EXTENDED_POSITION) <= 1; 
+        // } else {
+        //     isAtTarget = getPosition() <= 1; 
+        // }
 
         double velocity = extensionMotor.getVelocity().getValueAsDouble(); 
         boolean isStalled = stallDebouncer.calculate(Math.abs(velocity) < 0.05); 
@@ -76,6 +104,6 @@ public class ExtensionSubsystem extends SubsystemBase{
 
     @Override
     public void periodic() {
-        kp = SmartDashboard.getNumber("Extension kP", 0.05); 
+       kp = SmartDashboard.getNumber("Extension kP", 0.05); 
     }
 }

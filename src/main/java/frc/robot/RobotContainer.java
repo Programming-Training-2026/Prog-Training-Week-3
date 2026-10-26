@@ -13,6 +13,7 @@ import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.SpindexerSubsystem;
+import frc.robot.subsystems.TurretSubsystem;
 
 public class RobotContainer {
   private final CommandXboxController controller = new CommandXboxController(0); 
@@ -21,7 +22,7 @@ public class RobotContainer {
   private final SpindexerSubsystem spindexer = new SpindexerSubsystem(); 
   private final IntakeSubsystem intake = new IntakeSubsystem(); 
   private final ExtensionSubsystem extension = new ExtensionSubsystem(); 
-
+  private final TurretSubsystem turret = new TurretSubsystem(); 
   public RobotContainer() {
     configureBindings();
   }
@@ -33,7 +34,10 @@ public class RobotContainer {
     controller.b().onTrue(intake.stopIntaking()); 
 
     controller.x().onTrue(extension.extend()); 
-    controller.y().onTrue(extension.retract()); 
+    controller.y().onTrue(extension.retract());
+    
+    controller.povLeft().whileTrue(turret.moveLeft()); 
+    controller.povRight().whileTrue(turret.moveRight()); 
   }
 
   public Command getAutonomousCommand() {
