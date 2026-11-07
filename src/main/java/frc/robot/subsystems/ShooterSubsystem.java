@@ -1,5 +1,13 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -10,6 +18,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
 public class ShooterSubsystem extends SubsystemBase{
     private final TalonFX rightMotor; 
@@ -18,11 +27,47 @@ public class ShooterSubsystem extends SubsystemBase{
     private final VelocityVoltage velocityOutput = new VelocityVoltage(0);
     private final MotionMagicVelocityVoltage mmVelocityOutput = new MotionMagicVelocityVoltage(0); 
 
+    private final SysIdRoutine sysId; 
     public ShooterSubsystem() {
         rightMotor = new TalonFX(30); 
 
         SmartDashboard.putNumber("Shooter RPS", RPS); 
         configureMotor();
+        sysId = new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Volts.per(Seconds).of(1),
+                Volts.of(5), 
+                null,
+                null
+            ),
+            new SysIdRoutine.Mechanism(
+                (voltage) -> rightMotor.setVoltage(voltage.in(Volts)), 
+                (log) -> log.motor("Shooter")
+                        .voltage(Volts.of(rightMotor.getMotorVoltage().getValueAsDouble()))
+                        .angularPosition(
+                            Rotations.of(
+                                rightMotor.getPosition().getValueAsDouble()
+                            )
+                            
+                        ).angularVelocity(
+                            RotationsPerSecond.of(
+                                rightMotor.getVelocity().getValueAsDouble()
+                            )
+                        ), 
+                this
+                
+            )
+
+        ); 
+        
+    }
+
+    public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return sysId.quasistatic(direction); 
+    }
+
+    public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+        return sysId.dynamic(direction); 
     }
 
     public void configureMotor() {
@@ -37,6 +82,7 @@ public class ShooterSubsystem extends SubsystemBase{
         config.MotionMagic.MotionMagicAcceleration = 30;
         
         rightMotor.getConfigurator().apply(config); 
+        
     }
 
     public Command runShooting() {
@@ -50,6 +96,7 @@ public class ShooterSubsystem extends SubsystemBase{
             () -> rightMotor.stopMotor()
         ); 
     }
+
 
     @Override
     public void periodic() {

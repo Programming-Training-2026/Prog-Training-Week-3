@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.SuperStructureCommands;
 import frc.robot.subsystems.ExtensionSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
@@ -17,6 +18,8 @@ import frc.robot.subsystems.TurretSubsystem;
 
 public class RobotContainer {
   private final CommandXboxController controller = new CommandXboxController(0); 
+  private final CommandXboxController controller2 = new CommandXboxController(1);
+
   private final KickerSubsystem kicker = new KickerSubsystem(); 
   private final ShooterSubsystem shooter = new ShooterSubsystem(); 
   private final SpindexerSubsystem spindexer = new SpindexerSubsystem(); 
@@ -38,7 +41,20 @@ public class RobotContainer {
     
     controller.povLeft().whileTrue(turret.moveLeft()); 
     controller.povRight().whileTrue(turret.moveRight()); 
-  }
+
+    controller2.x().whileTrue(
+      shooter.sysIdDynamic(SysIdRoutine.Direction.kForward)
+    ); 
+    controller2.y().whileTrue(
+      shooter.sysIdDynamic(SysIdRoutine.Direction.kReverse)
+    ); 
+    controller2.a().whileTrue(
+      shooter.sysIdQuasistatic(SysIdRoutine.Direction.kForward)
+    ); 
+    controller2.b().whileTrue(
+      shooter.sysIdQuasistatic(SysIdRoutine.Direction.kReverse)
+    ); 
+  } 
 
   public Command getAutonomousCommand() {
     return Commands.print("No autonomous command configured");
