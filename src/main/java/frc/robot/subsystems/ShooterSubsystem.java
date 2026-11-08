@@ -26,6 +26,7 @@ public class ShooterSubsystem extends SubsystemBase{
     private double RPS = 4.0; 
     private final VelocityVoltage velocityOutput = new VelocityVoltage(0);
     private final MotionMagicVelocityVoltage mmVelocityOutput = new MotionMagicVelocityVoltage(0); 
+    private double rotationsToMeters = 0.5; 
 
     private final SysIdRoutine sysId; 
     public ShooterSubsystem() {
@@ -33,6 +34,35 @@ public class ShooterSubsystem extends SubsystemBase{
 
         SmartDashboard.putNumber("Shooter RPS", RPS); 
         configureMotor();
+        // Simple Motor
+        // sysId = new SysIdRoutine(
+        //     new SysIdRoutine.Config(
+        //         Volts.per(Seconds).of(1),
+        //         Volts.of(5), 
+        //         null,
+        //         null
+        //     ),
+        //     new SysIdRoutine.Mechanism(
+        //         (voltage) -> rightMotor.setVoltage(voltage.in(Volts)), 
+        //         (log) -> log.motor("Shooter")
+        //                 .voltage(Volts.of(rightMotor.getMotorVoltage().getValueAsDouble()))
+        //                 .angularPosition(
+        //                     Meters.of(
+        //                         rightMotor.getPosition().getValueAsDouble()
+        //                     )
+                            
+        //                 ).angularVelocity(
+        //                     RotationsPerSecond.of(
+        //                         rightMotor.getVelocity().getValueAsDouble()
+        //                     )
+        //                 ), 
+        //         this
+                
+        //     )
+
+        // ); 
+
+        // Elevator
         sysId = new SysIdRoutine(
             new SysIdRoutine.Config(
                 Volts.per(Seconds).of(1),
@@ -44,22 +74,20 @@ public class ShooterSubsystem extends SubsystemBase{
                 (voltage) -> rightMotor.setVoltage(voltage.in(Volts)), 
                 (log) -> log.motor("Shooter")
                         .voltage(Volts.of(rightMotor.getMotorVoltage().getValueAsDouble()))
-                        .angularPosition(
-                            Rotations.of(
-                                rightMotor.getPosition().getValueAsDouble()
+                        .linearPosition(
+                            Meters.of(
+                                getHeight()
                             )
                             
-                        ).angularVelocity(
-                            RotationsPerSecond.of(
+                        ).linearVelocity(
+                            MetersPerSecond.of(
                                 rightMotor.getVelocity().getValueAsDouble()
                             )
                         ), 
                 this
                 
             )
-
-        ); 
-        
+        );
     }
 
     public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
@@ -68,6 +96,14 @@ public class ShooterSubsystem extends SubsystemBase{
 
     public Command sysIdDynamic(SysIdRoutine.Direction direction) {
         return sysId.dynamic(direction); 
+    }
+
+    public double getHeight() {
+        return rightMotor.getPosition().getValueAsDouble() * rotationsToMeters; 
+    }
+
+    public double getLinearVelocity() {
+        return rightMotor.getVelocity().getValueAsDouble() * rotationsToMeters; 
     }
 
     public void configureMotor() {
